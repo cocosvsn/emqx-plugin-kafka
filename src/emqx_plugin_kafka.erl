@@ -15,6 +15,7 @@
 -module(emqx_plugin_kafka).
 
 -include_lib("emqx/include/emqx.hrl").
+-include_lib("brod/include/brod_int.hrl").
 -include_lib("emqx/include/logger.hrl").
 -export([ load/1
         , unload/0
