@@ -1,4 +1,5 @@
-%% Copyright (c) 2013-2019 EMQ Technologies Co., Ltd. All Rights Reserved.
+%%--------------------------------------------------------------------
+%% Copyright (c) 2019 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
+%%--------------------------------------------------------------------
 
 -module(emqx_plugin_kafka).
 
@@ -24,42 +26,37 @@
 -export([produce_message_kafka_payload/1]).
 -define(config(Key, Config, Default), proplists:get_value(Key, Config, Default)).
 %% Hooks functions
--export([ 
-%% 		 on_client_authenticate/2
-%%         , on_client_check_acl/5
-        on_client_connected/4
-        , on_client_disconnected/3
-%%         , on_client_subscribe/4
-%%         , on_client_unsubscribe/4
-%%         , on_session_created/3
-%%         , on_session_resumed/3
-%%         , on_session_terminated/3
-%%         , on_session_subscribed/4
-%%         , on_session_unsubscribed/4
-        , on_message_publish/2
-%%         , on_message_deliver/3
-%%         , on_message_acked/3
-%%         , on_message_dropped/3
+-export([%% on_client_authenticate/3
+%%		, on_client_check_acl/5
+		on_client_connected/4
+		, on_client_disconnected/4
+%%		, on_client_subscribe/4
+%%		, on_client_unsubscribe/4
+%%		, on_session_resumed/3
+%%		, on_session_subscribed/4
+%%		, on_session_unsubscribed/4
+		, on_message_publish/2
+%%		, on_message_delivered/3
+%%		, on_message_acked/3
+%%		, on_message_dropped/3
         ]).
 
 %% Called when the plugin application start
 load(Env) ->
 	ekaf_init([Env]),
-%%     emqx:hook('client.authenticate', fun ?MODULE:on_client_authenticate/2, [Env]),
-%%     emqx:hook('client.check_acl', fun ?MODULE:on_client_check_acl/5, [Env]),
+%%	emqx:hook('client.authenticate', fun ?MODULE:on_client_authenticate/3, [Env]),
+%%	emqx:hook('client.check_acl', fun ?MODULE:on_client_check_acl/5, [Env]),
     emqx:hook('client.connected', fun ?MODULE:on_client_connected/4, [Env]),
-    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/3, [Env]),
-%%     emqx:hook('client.subscribe', fun ?MODULE:on_client_subscribe/4, [Env]),
-%%     emqx:hook('client.unsubscribe', fun ?MODULE:on_client_unsubscribe/4, [Env]),
-%%     emqx:hook('session.created', fun ?MODULE:on_session_created/3, [Env]),
-%%     emqx:hook('session.resumed', fun ?MODULE:on_session_resumed/3, [Env]),
-%%     emqx:hook('session.subscribed', fun ?MODULE:on_session_subscribed/4, [Env]),
-%%     emqx:hook('session.unsubscribed', fun ?MODULE:on_session_unsubscribed/4, [Env]),
-%%     emqx:hook('session.terminated', fun ?MODULE:on_session_terminated/3, [Env]),
-    emqx:hook('message.publish', fun ?MODULE:on_message_publish/2, [Env]).
-%%     emqx:hook('message.deliver', fun ?MODULE:on_message_deliver/3, [Env]),
-%%     emqx:hook('message.acked', fun ?MODULE:on_message_acked/3, [Env]),
-%%     emqx:hook('message.dropped', fun ?MODULE:on_message_dropped/3, [Env]).
+    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/4, [Env]),
+%%	emqx:hook('client.subscribe', fun ?MODULE:on_client_subscribe/4, [Env]),
+%%	emqx:hook('client.unsubscribe', fun ?MODULE:on_client_unsubscribe/4, [Env]),
+%%	emqx:hook('session.resumed', fun ?MODULE:on_session_resumed/3, [Env]),
+%%	emqx:hook('session.subscribed', fun ?MODULE:on_session_subscribed/4, [Env]),
+%%	emqx:hook('session.unsubscribed', fun ?MODULE:on_session_unsubscribed/4, [Env]),
+	emqx:hook('message.publish', fun ?MODULE:on_message_publish/2, [Env]).
+%%	emqx:hook('message.delivered', fun ?MODULE:on_message_delivered/3, [Env]),
+%%	emqx:hook('message.acked', fun ?MODULE:on_message_acked/3, [Env]),
+%%	emqx:hook('message.dropped', fun ?MODULE:on_message_dropped/3, [Env]).
 
 ekaf_init(_Env) ->
     {ok, BrokerValues} = application:get_env(emqx_plugin_kafka, broker),
@@ -117,7 +114,8 @@ on_client_connected(Client = #{username:=Username, client_id:=Clientid, peername
 	?LOG(info, "[Kafka] on_client_connected node:~s", [node()]),
 	case AuthResult of 
 		success ->
-			proc_lib:spawn(?MODULE, produce_online_kafka_log, [Clientid, Username, Peername, connected]);
+%%			proc_lib:spawn(?MODULE, produce_online_kafka_log, [Clientid, Username, Peername, connected]);
+			?LOG(info, "[Kafka] on_client_connected auth success:~p", [AuthResult]);
 		Other ->
 			?LOG(info, "[Kafka] on_client_connected auth error:~p", [AuthResult])
 	end,
@@ -129,7 +127,7 @@ on_client_connected(Client = #{username:=Username, client_id:=Clientid, peername
 
 on_client_disconnected(Client = #{username:=Username, client_id:=Clientid, peername:= Peername}, ReasonCode, _Env) ->
 	?LOG(info, "[Kafka] on_client_disconnected ResonCode:~p", [ReasonCode]),
-	proc_lib:spawn(?MODULE, produce_online_kafka_log, [Clientid, Username, Peername, disconnected]),
+%%	proc_lib:spawn(?MODULE, produce_online_kafka_log, [Clientid, Username, Peername, disconnected]),
 	ok.
 
 
@@ -138,7 +136,8 @@ on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
     {ok, Message};
 
 on_message_publish(Message, _Env) ->
-	proc_lib:spawn(?MODULE, produce_message_kafka_payload, [Message]),
+	?LOG(info, "[Kafka] on_message_publish Message:~p", [Message]),	
+%%	proc_lib:spawn(?MODULE, produce_message_kafka_payload, [Message]),
     {ok, Message}.
 
 get_temp_topic(S)->
@@ -360,4 +359,3 @@ unload() ->
     emqx:unhook('message.deliver', fun ?MODULE:on_message_deliver/3),
     emqx:unhook('message.acked', fun ?MODULE:on_message_acked/3),
     emqx:unhook('message.dropped', fun ?MODULE:on_message_dropped/3).
-

@@ -1,4 +1,5 @@
-%% Copyright (c) 2013-2019 EMQ Technologies Co., Ltd. All Rights Reserved.
+%%--------------------------------------------------------------------
+%% Copyright (c) 2019 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
+%%--------------------------------------------------------------------
 
 -module(emqx_plugin_kafka_app).
 
@@ -23,8 +25,9 @@
         ]).
 
 start(_StartType, _StartArgs) ->
+    {ok, Sup} = emqx_plugin_kafka_sup:start_link(),
     emqx_plugin_kafka:load(application:get_all_env()),
-	emqx_plugin_kafka_sup:start_link().
+    {ok, Sup}.
 
 stop(_State) ->
     emqx_plugin_kafka:unload().
