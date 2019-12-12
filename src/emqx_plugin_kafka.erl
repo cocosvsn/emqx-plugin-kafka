@@ -29,7 +29,7 @@
 -export([%% on_client_authenticate/3
 %%		, on_client_check_acl/5
 		on_client_connected/4
-		, on_client_disconnected/4
+		, on_client_disconnected/3
 %%		, on_client_subscribe/4
 %%		, on_client_unsubscribe/4
 %%		, on_session_resumed/3
@@ -47,7 +47,7 @@ load(Env) ->
 %%	emqx:hook('client.authenticate', fun ?MODULE:on_client_authenticate/3, [Env]),
 %%	emqx:hook('client.check_acl', fun ?MODULE:on_client_check_acl/5, [Env]),
     emqx:hook('client.connected', fun ?MODULE:on_client_connected/4, [Env]),
-    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/4, [Env]),
+    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/3, [Env]),
 %%	emqx:hook('client.subscribe', fun ?MODULE:on_client_subscribe/4, [Env]),
 %%	emqx:hook('client.unsubscribe', fun ?MODULE:on_client_unsubscribe/4, [Env]),
 %%	emqx:hook('session.resumed', fun ?MODULE:on_session_resumed/3, [Env]),
