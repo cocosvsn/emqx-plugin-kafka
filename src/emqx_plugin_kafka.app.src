@@ -8,6 +8,5 @@
   {env, []},
   {licenses, ["Apache-2.0"]},
   {maintainers, ["EMQ X Team <contact@emqx.io>"]},
-  {links, [{"Homepage", "https://emqx.io/"},
-           {"Github", "https://github.com/emqx/emqx-plugin-template"}]}
- ]}.
+  {links,["Github",
+                      "https://github.com/emqx/emqx-auth-username"]}]}.
