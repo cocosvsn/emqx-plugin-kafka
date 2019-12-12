@@ -17,7 +17,6 @@
 -module(emqx_plugin_kafka).
 
 -include_lib("emqx/include/emqx.hrl").
--include_lib("brod/include/brod_int.hrl").
 -include_lib("emqx/include/logger.hrl").
 -export([ load/1
         , unload/0
@@ -29,7 +28,7 @@
 -export([%% on_client_authenticate/3
 %%		, on_client_check_acl/5
 		on_client_connected/4
-		, on_client_disconnected/3
+		, on_client_disconnected/4
 %%		, on_client_subscribe/4
 %%		, on_client_unsubscribe/4
 %%		, on_session_resumed/3
@@ -47,7 +46,7 @@ load(Env) ->
 %%	emqx:hook('client.authenticate', fun ?MODULE:on_client_authenticate/3, [Env]),
 %%	emqx:hook('client.check_acl', fun ?MODULE:on_client_check_acl/5, [Env]),
     emqx:hook('client.connected', fun ?MODULE:on_client_connected/4, [Env]),
-    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/3, [Env]),
+    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/4, [Env]),
 %%	emqx:hook('client.subscribe', fun ?MODULE:on_client_subscribe/4, [Env]),
 %%	emqx:hook('client.unsubscribe', fun ?MODULE:on_client_unsubscribe/4, [Env]),
 %%	emqx:hook('session.resumed', fun ?MODULE:on_session_resumed/3, [Env]),
@@ -110,33 +109,23 @@ ekaf_init(_Env) ->
 	ok = brod:start_producer(online_client, list_to_binary(OnlineTopic), ProducerConfig),
 	ok = brod:start_producer(custom_client, list_to_binary(CustomTopic), ProducerConfig).
 
-on_client_connected(Client = #{username:=Username, client_id:=Clientid, peername:= Peername, auth_result:= AuthResult}, ConnAck, ConnAttrs, _Env) ->
-	?LOG(info, "[Kafka] on_client_connected node:~s", [node()]),
-	case AuthResult of 
-		success ->
-%%			proc_lib:spawn(?MODULE, produce_online_kafka_log, [Clientid, Username, Peername, connected]);
-			?LOG(info, "[Kafka] on_client_connected auth success:~p", [AuthResult]);
-		Other ->
-			?LOG(info, "[Kafka] on_client_connected auth error:~p", [AuthResult])
-	end,
-	ok;
-
-on_client_connected(Client = #{username:=Username, client_id:=Clientid, peername:= Peername}, ConnAck, ConnAttrs, _Env) ->
-	?LOG(info, "[Kafka] on_client_connected node:~s no auth result!", [node()]),
+on_client_connected(#{clientid := ClientId}, ConnAck, _ConnInfo, _Env) ->
+	?LOG(error, "[Kafka] on_client_connected node:~s ", [ClientId]),
 	ok.
 
-on_client_disconnected(Client = #{username:=Username, client_id:=Clientid, peername:= Peername}, ReasonCode, _Env) ->
-	?LOG(info, "[Kafka] on_client_disconnected ResonCode:~p", [ReasonCode]),
+on_client_disconnected(#{clientid := ClientId}, ReasonCode, _ConnInfo, _Env) ->
+	?LOG(error, "[Kafka] on_client_disconnected ResonCode:~p", [ClientId]),
 %%	proc_lib:spawn(?MODULE, produce_online_kafka_log, [Clientid, Username, Peername, disconnected]),
 	ok.
 
 
 %% Transform message and return
 on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
+	?LOG(error, "[Kafka] on_message_publish topic=$SYS/ Message:~p", [Message]),
     {ok, Message};
 
 on_message_publish(Message, _Env) ->
-	?LOG(info, "[Kafka] on_message_publish Message:~p", [Message]),	
+	?LOG(error, "[Kafka] on_message_publish Message:~p", [Message]),	
 %%	proc_lib:spawn(?MODULE, produce_message_kafka_payload, [Message]),
     {ok, Message}.
 
