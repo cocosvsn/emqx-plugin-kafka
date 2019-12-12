@@ -114,7 +114,7 @@ ekaf_init(_Env) ->
 
 on_client_connected(#{clientid := ClientId, username := UserName, protocol := Protocol, peerhost := PeerHost}, ConnAck, _ConnInfo, _Env) ->
 %% on_client_connected(Client, ConnAck, _ConnInfo, _Env) ->
-	?LOG(error, "[Kafka] on_client_connected node:~s ", [Client]),
+	?LOG(error, "[Kafka] on_client_connected node:~s ", [_ConnInfo]),
 	%% 组装需要发送的消息。
 	KafkaPayload = [
 			{clientId,   ClientId},
@@ -128,9 +128,10 @@ on_client_connected(#{clientid := ClientId, username := UserName, protocol := Pr
 	],
 	%% 消息格式化为JSON二进制数据。
 	KafkaMessage = jsx:encode(KafkaPayload),	
+	[{_,Topic}] = ets:lookup(kafka_config, online_topic),
 	%% 向Kafka异步发送消息。
 	brod:produce(online_client,
-			list_to_binary(OnlineTopic),
+			list_to_binary(Topic),
 			0,
             <<>>,
             KafkaMessage),
@@ -152,9 +153,10 @@ on_client_disconnected(#{clientid := ClientId, username := UserName, protocol :=
 	],
 	%% 消息格式化为JSON二进制数据。
 	KafkaMessage = jsx:encode(KafkaPayload),	
+	[{_,Topic}] = ets:lookup(kafka_config, online_topic),
 	%% 向Kafka异步发送消息。
 	brod:produce(online_client,
-			list_to_binary(OnlineTopic),
+			list_to_binary(Topic),
 			0,
 			<<>>,
 			KafkaMessage),	
