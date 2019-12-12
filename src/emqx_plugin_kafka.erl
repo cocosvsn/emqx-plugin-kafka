@@ -109,8 +109,9 @@ ekaf_init(_Env) ->
 	ok = brod:start_producer(online_client, list_to_binary(OnlineTopic), ProducerConfig),
 	ok = brod:start_producer(custom_client, list_to_binary(CustomTopic), ProducerConfig).
 
-on_client_connected(#{clientid := ClientId}, ConnAck, _ConnInfo, _Env) ->
-	?LOG(error, "[Kafka] on_client_connected node:~s ", [ClientId]),
+%% on_client_connected(#{clientid := ClientId}, ConnAck, _ConnInfo, _Env) ->
+on_client_connected(Client, ConnAck, _ConnInfo, _Env) ->
+	?LOG(error, "[Kafka] on_client_connected node:~s ", [Client]),
 	ok.
 
 on_client_disconnected(#{clientid := ClientId}, ReasonCode, _ConnInfo, _Env) ->
@@ -121,7 +122,6 @@ on_client_disconnected(#{clientid := ClientId}, ReasonCode, _ConnInfo, _Env) ->
 
 %% Transform message and return
 on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
-	?LOG(error, "[Kafka] on_message_publish topic=$SYS/ Message:~p", [Message]),
     {ok, Message};
 
 on_message_publish(Message, _Env) ->
