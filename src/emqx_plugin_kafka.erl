@@ -105,28 +105,87 @@ ekaf_init(_Env) ->
 	ok = brod:start_client([{EventHost, EventPort}], event_client, ClientConfig),
 	ok = brod:start_client([{OnlineHost, OnlinePort}], online_client, ClientConfig),
 	ok = brod:start_client([{CustomHost, CustomPort}], custom_client, ClientConfig),
+	?LOG(error, "[Kafka] get metadata :~s", brod:get_metadata([{EventHost, EventPort}])),
+	?LOG(error, "[Kafka] get metadata :~s", brod:get_metadata([{OnlineHost, OnlinePort}])),
+	?LOG(error, "[Kafka] get metadata :~s", brod:get_metadata([{CustomHost, CustomPort}])),
 	ok = brod:start_producer(event_client, list_to_binary(EventTopic), ProducerConfig),
 	ok = brod:start_producer(online_client, list_to_binary(OnlineTopic), ProducerConfig),
 	ok = brod:start_producer(custom_client, list_to_binary(CustomTopic), ProducerConfig).
 
-%% on_client_connected(#{clientid := ClientId}, ConnAck, _ConnInfo, _Env) ->
-on_client_connected(Client, ConnAck, _ConnInfo, _Env) ->
+on_client_connected(#{clientid := ClientId, username := UserName, protocol := Protocol, peerhost := PeerHost}, ConnAck, _ConnInfo, _Env) ->
+%% on_client_connected(Client, ConnAck, _ConnInfo, _Env) ->
 	?LOG(error, "[Kafka] on_client_connected node:~s ", [Client]),
+	%% 组装需要发送的消息。
+	KafkaPayload = [
+			{clientId,   ClientId},
+			{appId,      UserName},
+			{recvedAt,   timestamp()},
+			{protocol,   Protocol},
+			{action,     <<"device.status.online">>},
+			{peerHost,   PeerHost},
+			{state,      <<"online">>},
+			{username,   UserName}
+	],
+	%% 消息格式化为JSON二进制数据。
+	KafkaMessage = jsx:encode(KafkaPayload),	
+	%% 向Kafka异步发送消息。
+	brod:produce(online_client,
+			list_to_binary(OnlineTopic),
+			0,
+            <<>>,
+            KafkaMessage),
 	ok.
 
-on_client_disconnected(#{clientid := ClientId}, ReasonCode, _ConnInfo, _Env) ->
+on_client_disconnected(#{clientid := ClientId, username := UserName, protocol := Protocol, peerhost := PeerHost}, ReasonCode, _ConnInfo, _Env) ->
 	?LOG(error, "[Kafka] on_client_disconnected ResonCode:~p", [ClientId]),
 %%	proc_lib:spawn(?MODULE, produce_online_kafka_log, [Clientid, Username, Peername, disconnected]),
+	%% 组装需要发送的消息。
+	KafkaPayload = [
+			{clientId,   ClientId},
+			{appId,      UserName},
+			{recvedAt,   timestamp()},
+			{protocol,   Protocol},
+			{action,     <<"device.status.offline">>},
+			{peerHost,   PeerHost},
+			{state,      <<"offline">>},
+			{username,   UserName}
+	],
+	%% 消息格式化为JSON二进制数据。
+	KafkaMessage = jsx:encode(KafkaPayload),	
+	%% 向Kafka异步发送消息。
+	brod:produce(online_client,
+			list_to_binary(OnlineTopic),
+			0,
+			<<>>,
+			KafkaMessage),	
 	ok.
-
 
 %% Transform message and return
 on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
     {ok, Message};
 
 on_message_publish(Message, _Env) ->
-	?LOG(error, "[Kafka] on_message_publish Message:~p", [Message]),	
+	?LOG(error, "[Kafka] on_message_publish Message:~p", [emqx_message:format(Message)]),	
 %%	proc_lib:spawn(?MODULE, produce_message_kafka_payload, [Message]),
+	%% 组装需要发送的消息。
+	% KafkaPayload = [
+	% 		{clientId,   ClientId},
+	% 		{appId,      UserName},
+	% 		{recvedAt,   timestamp()},
+	% 		{protocol,   Protocol},
+	% 		{action,     <<"device.status.offline">>},
+	% 		{peerHost,   PeerHost},
+	% 		{state,      <<"offline">>},
+	% 		{username,   UserName}
+	% ],
+	% %% 消息格式化为JSON二进制数据。
+	% KafkaMessage = jsx:encode(KafkaPayload),	
+	% %% 向Kafka异步发送消息。
+	% brod:produce(online_client,
+	% 		list_to_binary(OnlineTopic),
+	% 		0,
+	% 		<<>>,
+	% 		KafkaMessage),	
     {ok, Message}.
 
 get_temp_topic(S)->
