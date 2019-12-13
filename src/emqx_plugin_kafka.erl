@@ -127,7 +127,13 @@ on_client_connected(#{clientid := ClientId, username := UserName, protocol := Pr
 			{username,   UserName}
 	],
 	%% 消息格式化为JSON二进制数据。
-	KafkaMessage = jsx:encode(KafkaPayload),	
+	KafkaMessage = jsx:encode([
+			{<<"clientId">>,ClientId},
+%%			{<<"protocol">>,Protocol},
+%%			{<<"username">>,UserName},
+			{<<"action">>,<<"device.status.online">>},
+			{<<"state">>,<<"online">>}
+	]),	
 	[{_,Topic}] = ets:lookup(kafka_config, online_topic),
 	%% 向Kafka异步发送消息。
 	brod:produce(online_client,
@@ -152,7 +158,14 @@ on_client_disconnected(#{clientid := ClientId, username := UserName, protocol :=
 			{username,   UserName}
 	],
 	%% 消息格式化为JSON二进制数据。
-	KafkaMessage = jsx:encode(KafkaPayload),	
+	%% KafkaMessage = jsx:encode(KafkaPayload),	
+	KafkaMessage = jsx:encode([
+			{<<"clientId">>,ClientId},
+%%			{<<"protocol">>,Protocol},
+%%			{<<"username">>,UserName},
+			{<<"action">>,<<"device.status.offline">>},
+			{<<"state">>,<<"offline">>}
+	]),	
 	[{_,Topic}] = ets:lookup(kafka_config, online_topic),
 	%% 向Kafka异步发送消息。
 	brod:produce(online_client,
